@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { desktopSecret, createGrant } from '../../../../api/desktop-grants.mjs';
 import { desktopEnabled, setDesktopRequest } from '@/lib/desktop';
-import { auth, loginRedirect, getUser, cookieName, secure } from '@/lib/session';
+import { auth, loginRedirect, getUser } from '@/lib/session';
 import { cookies } from 'next/headers';
 
 export async function GET(request) {
