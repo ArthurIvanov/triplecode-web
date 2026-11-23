@@ -12,6 +12,10 @@ const featureLabels = {
   agent: 'Agent', plan: 'Plan', ask: 'Ask', rewrite: 'Rewrite', inline: 'Inline', other: 'Прочее',
 };
 
+const outcomeLabels = {
+  ok: 'Успешно', error: 'Ошибка', stopped: 'Остановлено', accepted: 'Принято', rejected: 'Отклонено',
+};
+
 function Bar({ value, max }) {
   return (
     <span className="block h-1.5 rounded-full bg-muted" aria-hidden="true">
@@ -50,6 +54,25 @@ export default async function Usage() {
             </Card>
           ))}
         </div>
+        {(summary.totals.accepted > 0 || summary.totals.rejected > 0) && (
+          <Card className="mt-4 p-5">
+            <h2 className="text-sm font-medium">Ревью патчей</h2>
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              {[
+                ['Принято', summary.totals.accepted],
+                ['Отклонено', summary.totals.rejected],
+                ['Доля принятых', summary.totals.accepted + summary.totals.rejected > 0
+                  ? Math.round((summary.totals.accepted / (summary.totals.accepted + summary.totals.rejected)) * 100) + '%'
+                  : '—'],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <p className="text-xs text-muted-foreground">{label}</p>
+                  <p className="mt-1 text-lg font-semibold tabular-nums">{value}</p>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
         <Card className="mt-4 p-5">
           <h2 className="text-sm font-medium">По дням</h2>
           {summary.days.length === 0 ? (

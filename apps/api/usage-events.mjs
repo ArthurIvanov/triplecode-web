@@ -6,7 +6,7 @@ let database;
 
 const FEATURES = new Set(['agent', 'plan', 'ask', 'rewrite', 'inline', 'other']);
 const PROVIDERS = new Set(['ollama', 'openrouter', 'auto']);
-const OUTCOMES = new Set(['ok', 'error', 'stopped']);
+const OUTCOMES = new Set(['ok', 'error', 'stopped', 'accepted', 'rejected']);
 
 function store() {
   if (database) return database;
@@ -43,7 +43,7 @@ export function recordUsage(email, event) {
 }
 
 export function usageSummary(email, { days = 30 } = {}) {
-  if (!process.env.DESKTOP_GRANT_DB) return { days: [], byFeature: [], byModel: [], totals: { events: 0, ok: 0, errors: 0 } };
+  if (!process.env.DESKTOP_GRANT_DB) return { days: [], byFeature: [], byModel: [], byOutcome: [], totals: { events: 0, ok: 0, errors: 0, accepted: 0, rejected: 0 } };
   const since = Date.now() - days * 86400000;
   const rows = store().prepare(`
     SELECT ts, feature, model, outcome FROM usage_events
@@ -53,19 +53,23 @@ export function usageSummary(email, { days = 30 } = {}) {
   const byDay = new Map();
   const byFeature = new Map();
   const byModel = new Map();
-  const totals = { events: 0, ok: 0, errors: 0 };
+  const byOutcome = new Map();
+  const totals = { events: 0, ok: 0, errors: 0, accepted: 0, rejected: 0 };
   for (const row of rows) {
     totals.events += 1;
     if (row.outcome === 'ok') totals.ok += 1;
     if (row.outcome === 'error') totals.errors += 1;
+    if (row.outcome === 'accepted') totals.accepted += 1;
+    if (row.outcome === 'rejected') totals.rejected += 1;
     const day = new Date(row.ts).toISOString().slice(0, 10);
     byDay.set(day, (byDay.get(day) || 0) + 1);
     byFeature.set(row.feature, (byFeature.get(row.feature) || 0) + 1);
     const model = row.model || 'unknown';
     byModel.set(model, (byModel.get(model) || 0) + 1);
+    byOutcome.set(row.outcome, (byOutcome.get(row.outcome) || 0) + 1);
   }
   const daysList = [...byDay.entries()].sort(([a], [b]) => a.localeCompare(b))
     .map(([date, count]) => ({ date, count }));
   const ranked = map => [...map.entries()].sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ name, count }));
-  return { days: daysList, byFeature: ranked(byFeature), byModel: ranked(byModel), totals };
+  return { days: daysList, byFeature: ranked(byFeature), byModel: ranked(byModel), byOutcome: ranked(byOutcome), totals };
 }
