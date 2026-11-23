@@ -6,7 +6,7 @@ port = 54321
 [db]
 port = 54322
 
-[inbucket]
+[local_smtp]
 enabled = true
 port = 54324
 

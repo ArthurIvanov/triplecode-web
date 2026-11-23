@@ -7,7 +7,7 @@
 
 ## Запуск на Mac mini
 
-Нужны запущенный Docker Desktop с Compose, Supabase CLI и копия репозитория.
+Нужны запущенный Docker Desktop с Compose, Supabase CLI 3.3+ и копия репозитория.
 Выполните из корня репозитория:
 
 ```sh
