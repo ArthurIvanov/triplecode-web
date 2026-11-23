@@ -1,4 +1,5 @@
 import { desktopSecret, exchangeGrant } from '../../../../../api/desktop-grants.mjs';
+import { recordSession, touchSession, dropSession, sessionRefreshToken, sessionIdPattern } from '../../../../../api/desktop-sessions.mjs';
 import { desktopEnabled } from '@/lib/desktop';
 import { auth, getUser, isInvalid } from '@/lib/session';
 
@@ -36,10 +37,14 @@ export async function POST(request, { params }) {
         return reply({ error: 'invalid_request' }, 400);
       }
       const session = exchangeGrant(fields.code, fields.verifier);
-      return session ? reply(session) : reply({ error: 'invalid_grant' }, 401);
+      if (!session) return reply({ error: 'invalid_grant' }, 401);
+      const label = typeof fields.label === 'string' ? fields.label.slice(0, 120) : null;
+      const sessionId = recordSession(session.email, session, label);
+      return reply({ ...session, session_id: sessionId });
     }
     if (action === 'refresh' && typeof fields.refresh_token === 'string' && fields.refresh_token) {
       const session = await auth.refresh(fields.refresh_token);
+      if (sessionIdPattern.test(fields.session_id || '')) touchSession(fields.session_id, session.refresh_token);
       return reply({
         access_token: session.access_token, refresh_token: session.refresh_token,
         expires_in: session.expires_in, email: session.user?.email,
@@ -48,6 +53,7 @@ export async function POST(request, { params }) {
     if (action === 'logout' && typeof fields.access_token === 'string' && fields.access_token) {
       if (!(await getUser(fields.access_token))) return reply({ error: 'invalid_session' }, 401);
       await auth.logout(fields.access_token);
+      if (sessionIdPattern.test(fields.session_id || '')) dropSession(fields.session_id);
       return reply({ signed_out: true });
     }
     return reply({ error: 'invalid_request' }, 400);

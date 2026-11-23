@@ -12,14 +12,24 @@ Verifier и state — 32 случайных байта в base64url без до�
 `triplecode://triplecode.triplecode-mvp/auth/callback?code=…&state=…`.
 Callback фиксирован. Ссылка содержит одноразовый grant на две минуты.
 
-JSON POST `/api/desktop/exchange` принимает `{code, verifier}` и возвращает
-`{access_token, refresh_token, expires_in, email}`. Неподходящий verifier не
-расходует grant. Удачный обмен расходует его атомарно. POST
-`/api/desktop/refresh` принимает `{refresh_token}` и возвращает ту же схему
-сессии. POST `/api/desktop/logout` принимает `{access_token}`, завершает
-сессию устройства и возвращает `{signed_out: true}`. Ответ 401 означает
-недействительный grant или сессию. Остальные ошибки можно повторить с учётом
-срока действия grant и состояния сессии.
+JSON POST `/api/desktop/exchange` принимает `{code, verifier, label?}` и
+возвращает `{access_token, refresh_token, expires_in, email, session_id}`.
+Неподходящий verifier не расходует grant. Удачный обмен расходует его
+атомарно и регистрирует сессию устройства. `label` — необязательная короткая
+строка для показа в кабинете (имя устройства). POST `/api/desktop/refresh`
+принимает `{refresh_token, session_id?}` и возвращает ту же схему сессии;
+при переданном `session_id` обновляет время активности и сохранённый
+refresh-токен. POST `/api/desktop/logout` принимает `{access_token,
+session_id?}`, завершает сессию устройства и возвращает `{signed_out: true}`.
+Ответ 401 означает недействительный grant или сессию. Остальные ошибки можно
+повторить с учётом срока действия grant и состояния сессии.
+
+Сессии устройств перечислены в `desktop_sessions` той же SQLite-базы:
+id, email, зашифрованный refresh-токен, метка, даты создания и активности,
+`revoked_at`. Кабинет `/account/sessions` показывает их владельцу email и
+позволяет отозвать: запись помечается revoked, а refresh-токен best-effort
+завершается через Supabase. Поля `session_id` опциональны — старые клиенты
+продолжают работать без регистрации сессии.
 
 Токены IDE не записываются в браузерную сессию. Существующий веб-вход
 продолжает выдавать веб-cookie. Для включения укажите `DESKTOP_GRANT_DB` в

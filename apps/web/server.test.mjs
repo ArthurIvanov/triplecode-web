@@ -142,7 +142,9 @@ test('Next.js serves email OTP, protected profile, refresh and logout', async t 
   assert.equal(location(await get('/account')), '/login');
   const returning = await post('/auth/code', { email });
   const returningFlow = new URL(location(returning), origin).searchParams.get('flow');
-  assert.equal(location(await post('/auth/verify', { token: '123456', flow: returningFlow }, { Cookie: jar(returning) })), '/account');
+  const returningVerified = await post('/auth/verify', { token: '123456', flow: returningFlow }, { Cookie: jar(returning) });
+  assert.equal(location(returningVerified), '/account');
+  const webSessionCookie = { Cookie: jar(returningVerified, '__Host-tc-challenge-') };
   const secret = () => randomBytes(32).toString('base64url');
   const verifier = secret();
   const state = secret();
@@ -178,8 +180,24 @@ test('Next.js serves email OTP, protected profile, refresh and logout', async t 
   assert.deepEqual(exchanges.map(response => response.status).sort(), [200, 401]);
   const desktopSession = await exchanges.find(response => response.ok).json();
   assert.equal(desktopSession.email, email);
+  assert.match(desktopSession.session_id, /^[a-f0-9-]{36}$/);
   const renewed = await desktopApi('refresh', { refresh_token: desktopSession.refresh_token });
   assert.equal(renewed.status, 200);
+  const tracked = await desktopApi('refresh', {
+    refresh_token: desktopSession.refresh_token, session_id: desktopSession.session_id,
+  });
+  assert.equal(tracked.status, 200);
   assert.equal((await desktopApi('logout', { access_token: (await renewed.json()).access_token })).status, 200);
+
+  const sessionsPage = await get('/account/sessions', webSessionCookie);
+  assert.equal(sessionsPage.status, 200);
+  const sessionsHtml = await sessionsPage.text();
+  assert.match(sessionsHtml, /TripleCode IDE/);
+  assert.ok(sessionsHtml.includes('name="session_id" value="' + desktopSession.session_id + '"'));
+  const foreignRevoke = await post('/account/sessions/revoke', { session_id: '00000000-0000-0000-0000-000000000000' }, webSessionCookie);
+  assert.equal(location(foreignRevoke), '/account/sessions?error=revoke');
+  const revoke = await post('/account/sessions/revoke', { session_id: desktopSession.session_id }, webSessionCookie);
+  assert.equal(location(revoke), '/account/sessions?revoked=1');
+  assert.match(await (await get('/account/sessions', webSessionCookie)).text(), /Активных сессий нет/);
 
 });

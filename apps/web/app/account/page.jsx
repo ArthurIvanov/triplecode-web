@@ -1,12 +1,13 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { AuthShell } from '@/components/auth-shell';
+import Link from 'next/link';
+import { CabinetShell } from '@/components/cabinet-shell';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Alert } from '@/components/ui/alert';
 import { cookieName, getUser } from '@/lib/session';
 
-export const metadata = { title: 'Профиль' };
+export const metadata = { title: 'Профиль — TripleCode' };
 
 export default async function Account({ searchParams }) {
   const { error } = await searchParams;
@@ -25,45 +26,34 @@ export default async function Account({ searchParams }) {
   }
 
   return (
-    <AuthShell>
-      <Card as="section" variant="auth" aria-labelledby="profile-title">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            {user && <div className="eyebrow"><span /> Аккаунт активен</div>}
-            <h1 id="profile-title" className="mt-5 text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">Профиль</h1>
-          </div>
-          {user && (
-            <div aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-full border border-[#b7f34a]/25 bg-[#b7f34a]/10 text-sm font-semibold text-[#b7f34a]">
-              {user.email.slice(0, 1).toUpperCase()}
-            </div>
-          )}
-        </div>
+    <CabinetShell email={user?.email}>
+      <div className="max-w-2xl">
+        <h1 className="text-2xl font-semibold tracking-tight">Профиль</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Данные вашей учётной записи TripleCode.</p>
         {unavailable ? (
-          <>
-            <Alert variant="auth" className="mt-5">Не удалось проверить сессию. Попробуйте снова через несколько минут.</Alert>
-            <Button asChild variant="secondary" className="mt-5"><a href="/account">Повторить</a></Button>
-          </>
+          <Card className="mt-6 p-5">
+            <Alert variant="auth">Не удалось проверить сессию. Попробуйте снова через несколько минут.</Alert>
+            <Button asChild variant="secondary" className="mt-4"><a href="/account">Повторить</a></Button>
+          </Card>
         ) : (
-          <>
-            {error === 'logout' && <Alert variant="auth" className="mt-5">Не удалось завершить сессию. Попробуйте ещё раз.</Alert>}
-            <div className="mt-8 rounded-xl border border-white/[0.08] bg-white/[0.035] p-4">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="text-xs text-[#777b85]">Подтверждённый email</p>
-                  <p className="mt-1 break-all text-sm font-medium text-white">{user.email}</p>
+          <Card className="mt-6 p-5">
+            {error === 'logout' && <Alert variant="auth" className="mb-4">Не удалось завершить сессию. Попробуйте ещё раз.</Alert>}
+            <dl className="space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <dt className="text-xs text-muted-foreground">Email</dt>
+                  <dd className="mt-1 break-all text-sm font-medium">{user.email}</dd>
                 </div>
-                <span className="shrink-0 rounded-full border border-[#b7f34a]/20 bg-[#b7f34a]/10 px-2.5 py-1 text-[11px] font-medium text-[#b7f34a]">Подтверждён</span>
+                <span className="shrink-0 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground">Подтверждён</span>
               </div>
+            </dl>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Button asChild variant="secondary"><Link href="/account/sessions">Управление сессиями</Link></Button>
+              <Button asChild variant="ghost"><a href="/">На главную</a></Button>
             </div>
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Button asChild variant="brand" className="flex-1 text-center"><a href="/">На главную</a></Button>
-              <form method="post" action="/auth/logout" className="flex-1">
-                <Button type="submit" variant="secondary" className="w-full">Выйти</Button>
-              </form>
-            </div>
-          </>
+          </Card>
         )}
-      </Card>
-    </AuthShell>
+      </div>
+    </CabinetShell>
   );
 }
