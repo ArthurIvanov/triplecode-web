@@ -19,7 +19,7 @@ export function CabinetShell({ email, children }) {
     <main id="main" tabIndex={-1} className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-6 px-5 sm:px-8">
-          <Brand />
+          <Brand href="/account" />
           <nav aria-label="Кабинет" className="flex items-center gap-1 overflow-x-auto">
             {sections.map(section => {
               const active = section.exact ? pathname === section.href : pathname.startsWith(section.href);

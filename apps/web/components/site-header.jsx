@@ -1,8 +1,12 @@
 import Link from 'next/link'
+import { cookies } from 'next/headers'
 import { Brand } from './brand'
 import { ThemeToggle } from './theme-toggle'
+import { cookieName, getUser } from '@/lib/session'
 
-export function SiteHeader() {
+export async function SiteHeader() {
+  const jar = await cookies()
+  const user = await getUser(jar.get(cookieName('access'))?.value).catch(() => null)
   return (
     <header className="site-header">
       <div className="mx-auto flex h-16 max-w-[1360px] items-center justify-between px-5 sm:px-8">
@@ -18,9 +22,15 @@ export function SiteHeader() {
             Скачать
           </span>
           <ThemeToggle />
-          <Link href="/login" className="nav-login">
-            Войти
-          </Link>
+          {user?.email ? (
+            <Link href="/account" className="nav-login">
+              Кабинет
+            </Link>
+          ) : (
+            <Link href="/login" className="nav-login">
+              Войти
+            </Link>
+          )}
         </nav>
       </div>
     </header>

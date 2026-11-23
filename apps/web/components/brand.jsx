@@ -1,11 +1,11 @@
 import Link from 'next/link'
 
-export function Brand() {
+export function Brand({ href = '/' }) {
   return (
     <Link
-      href="/"
+      href={href}
       className="brand-link inline-flex items-center gap-2.5 rounded-md text-sm font-semibold tracking-[-0.02em] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#b7f34a]"
-      aria-label="TripleCode — на главную"
+      aria-label="TripleCode"
     >
       <span className="brand-mark grid size-7 place-items-center rounded-[7px]">
         <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
