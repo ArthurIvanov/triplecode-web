@@ -200,4 +200,15 @@ test('Next.js serves email OTP, protected profile, refresh and logout', async t 
   assert.equal(location(revoke), '/account/sessions?revoked=1');
   assert.match(await (await get('/account/sessions', webSessionCookie)).text(), /Активных сессий нет/);
 
+  assert.equal((await fetch(url + '/api/usage/event', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+  })).status, 401);
+  const usagePost = await fetch(url + '/api/usage/event', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer access' },
+    body: JSON.stringify({ feature: 'agent', provider: 'ollama', model: 'test-model', duration_ms: 1200, outcome: 'ok' }),
+  });
+  assert.equal(usagePost.status, 200);
+  assert.match(await (await get('/account/usage', webSessionCookie)).text(), /test-model/);
+
 });

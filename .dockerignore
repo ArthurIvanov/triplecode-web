@@ -6,6 +6,7 @@
 !apps/api/auth.mjs
 !apps/api/desktop-grants.mjs
 !apps/api/desktop-sessions.mjs
+!apps/api/usage-events.mjs
 !apps/web/
 !apps/web/**
 apps/web/.next

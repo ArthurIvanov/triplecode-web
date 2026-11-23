@@ -4,7 +4,7 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund --fetch-retries=1
-COPY apps/api/auth.mjs apps/api/desktop-grants.mjs apps/api/desktop-sessions.mjs apps/api/
+COPY apps/api/auth.mjs apps/api/desktop-grants.mjs apps/api/desktop-sessions.mjs apps/api/usage-events.mjs apps/api/
 COPY apps/web apps/web
 RUN npm run build
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=3000
