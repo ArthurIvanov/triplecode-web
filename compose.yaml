@@ -1,0 +1,17 @@
+services:
+  web:
+    build: .
+    init: true
+    restart: unless-stopped
+    environment:
+      APP_ORIGIN: "${APP_ORIGIN:?Set APP_ORIGIN to the browser URL}"
+      SUPABASE_URL: "${SUPABASE_URL:?Set SUPABASE_URL reachable inside Docker}"
+      SUPABASE_PUBLISHABLE_KEY: "${SUPABASE_PUBLISHABLE_KEY:?Set the Supabase publishable key}"
+    ports:
+      - "${WEB_BIND_IP:-127.0.0.1}:${WEB_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/',{signal:AbortSignal.timeout(3000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 15s
