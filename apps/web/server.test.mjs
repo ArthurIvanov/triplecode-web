@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
+import { createHash, randomBytes } from 'node:crypto';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createServer } from 'node:http';
 import { test } from 'node:test';
 import { setTimeout } from 'node:timers/promises';
@@ -70,7 +74,10 @@ test('Next.js serves email OTP, protected profile, refresh and logout', async t 
   });
   t.after(() => upstream.close());
   const origin = 'https://triplecode.example';
+  const grantDirectory = await mkdtemp(join(tmpdir(), 'triplecode-auth-test-'));
+  t.after(() => rm(grantDirectory, { recursive: true, force: true }));
   const url = await startNext(t, {
+    DESKTOP_GRANT_DB: join(grantDirectory, 'grants.sqlite'),
     APP_ORIGIN: origin,
     SUPABASE_URL: await listen(upstream),
     SUPABASE_PUBLISHABLE_KEY: 'test-key',
@@ -136,4 +143,43 @@ test('Next.js serves email OTP, protected profile, refresh and logout', async t 
   const returning = await post('/auth/code', { email });
   const returningFlow = new URL(location(returning), origin).searchParams.get('flow');
   assert.equal(location(await post('/auth/verify', { token: '123456', flow: returningFlow }, { Cookie: jar(returning) })), '/account');
+  const secret = () => randomBytes(32).toString('base64url');
+  const verifier = secret();
+  const state = secret();
+  const codeChallenge = createHash('sha256').update(verifier).digest('base64url');
+  const desktopStart = await get('/desktop/start?' + new URLSearchParams({
+    state, code_challenge: codeChallenge, code_challenge_method: 'S256',
+  }));
+  const desktop = new URL(location(desktopStart), origin).searchParams.get('desktop');
+  const desktopCookie = { Cookie: jar(desktopStart) };
+  assert.match(await (await get(location(desktopStart), desktopCookie)).text(), /Вход из приложения/);
+  const desktopSend = await post('/auth/code', { desktop, email }, desktopCookie);
+  const desktopFlow = new URL(location(desktopSend), origin).searchParams.get('flow');
+  const desktopProof = { Cookie: desktopCookie.Cookie + '; ' + jar(desktopSend) };
+  assert.equal(location(await post('/auth/verify', { flow: desktopFlow, token: '123456' }, desktopProof)), '/login?error=desktop-expired');
+  const desktopVerified = await post('/auth/verify', { desktop, flow: desktopFlow, token: '123456' }, desktopProof);
+  assert.match(location(desktopVerified), /^\/desktop\/complete/);
+  assert.ok(desktopVerified.headers.getSetCookie().every(cookie => !/^__Host-tc-(access|refresh)=/.test(cookie)));
+  const completion = await get(location(desktopVerified), { Cookie: jar(desktopVerified) });
+  assert.match(completion.headers.get('cache-control'), /no-store/);
+  const completionPage = await completion.text();
+  const callback = new URL(completionPage.match(/href="(triplecode:[^"]+)"/)[1].replaceAll('&amp;', '&'));
+  const desktopCode = callback.searchParams.get('code');
+  assert.equal(callback.host, 'triplecode.triplecode-mvp');
+  assert.equal(callback.searchParams.get('state'), state);
+  const desktopApi = (action, fields) => fetch(url + '/api/desktop/' + action, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fields),
+  });
+  assert.equal((await desktopApi('exchange', { code: desktopCode, verifier: secret() })).status, 401);
+  const exchanges = await Promise.all([
+    desktopApi('exchange', { code: desktopCode, verifier }),
+    desktopApi('exchange', { code: desktopCode, verifier }),
+  ]);
+  assert.deepEqual(exchanges.map(response => response.status).sort(), [200, 401]);
+  const desktopSession = await exchanges.find(response => response.ok).json();
+  assert.equal(desktopSession.email, email);
+  const renewed = await desktopApi('refresh', { refresh_token: desktopSession.refresh_token });
+  assert.equal(renewed.status, 200);
+  assert.equal((await desktopApi('logout', { access_token: (await renewed.json()).access_token })).status, 200);
+
 });

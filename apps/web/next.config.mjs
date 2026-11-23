@@ -9,6 +9,12 @@ export default {
         { key: 'X-Content-Type-Options', value: 'nosniff' },
         { key: 'Content-Security-Policy', value: "base-uri 'self'; frame-ancestors 'none'; form-action 'self'; object-src 'none'" },
       ],
+    }, {
+      source: '/desktop/complete',
+      headers: [
+        { key: 'Cache-Control', value: 'no-store' },
+        { key: 'Referrer-Policy', value: 'no-referrer' },
+      ],
     }];
   },
 };

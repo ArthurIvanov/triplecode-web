@@ -18,7 +18,7 @@ export function cookieName(suffix) {
   return (secure() ? '__Host-tc-' : 'tc-') + suffix;
 }
 
-function setCookie(response, suffix, value, maxAge) {
+export function setCookie(response, suffix, value, maxAge) {
   response.cookies.set(cookieName(suffix), value, {
     httpOnly: true, sameSite: 'lax', secure: secure(), path: '/', maxAge,
   });
@@ -38,8 +38,21 @@ export function challengeName(flow) {
   return typeof flow === 'string' && /^[a-f0-9-]{36}$/.test(flow) ? 'challenge-' + flow : null;
 }
 
-export function setChallenge(response, flow, email) {
-  setCookie(response, challengeName(flow), email, email ? 1800 : 0);
+export function emailChallenge(jar, flow) {
+  const name = challengeName(flow);
+  const value = name ? jar.get(cookieName(name))?.value : undefined;
+  if (!value) return null;
+  if (!value.startsWith('{')) return { email: value };
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+export function setChallenge(response, flow, email, desktop) {
+  const value = email && desktop ? JSON.stringify({ email, desktop }) : email;
+  setCookie(response, challengeName(flow), value, email ? 1800 : 0);
 }
 
 export function isInvalid(error) {
@@ -63,9 +76,10 @@ export function redirectResponse(path) {
   });
 }
 
-export function loginRedirect({ error, flow } = {}) {
+export function loginRedirect({ error, flow, desktop } = {}) {
   const params = new URLSearchParams();
   if (flow) params.set('flow', flow);
+  if (desktop) params.set('desktop', desktop);
   if (error) params.set('error', error);
   return redirectResponse('/login' + (params.size ? '?' + params : ''));
 }

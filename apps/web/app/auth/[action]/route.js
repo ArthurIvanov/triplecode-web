@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
+import { issueGrant } from '../../../../api/desktop-grants.mjs';
+import { desktopEnabled, desktopRequest, setDesktopRequest, setDesktopTicket } from '@/lib/desktop';
 import { NextResponse } from 'next/server';
 import {
-  appOrigin, auth, challengeName, clearSession, cookieName, getUser, isInvalid,
+  appOrigin, auth, clearSession, cookieName, emailChallenge, getUser, isInvalid,
   loginRedirect, redirectResponse, saveSession, setChallenge,
 } from '@/lib/session';
 
@@ -61,40 +63,63 @@ export async function POST(request, { params }) {
   if (!form) return loginRedirect({ error: 'email' });
 
   const flow = form.get('flow');
-  const name = challengeName(flow);
-  const challenge = name ? request.cookies.get(cookieName(name))?.value : undefined;
+  const desktop = form.get('desktop') || undefined;
+  const requestContext = desktop && desktopEnabled() ? desktopRequest(request.cookies, desktop) : null;
+  const pending = emailChallenge(request.cookies, flow);
+  if ((desktop && !requestContext) || (pending && pending.desktop !== desktop)) {
+    return loginRedirect({ error: 'desktop-expired' });
+  }
+  const challenge = pending?.email;
+  const respond = options => loginRedirect({ ...options, desktop });
 
   if (action === 'code') {
-    if (flow && !challenge) return loginRedirect({ error: 'expired' });
+    if (flow && !challenge) return respond({ error: 'expired' });
     const email = (challenge ?? form.get('email') ?? '').trim().toLowerCase();
-    if (email.length > 254 || !emailPattern.test(email)) return loginRedirect({ error: 'email' });
+    if (email.length > 254 || !emailPattern.test(email)) return respond({ error: 'email' });
     const nextFlow = flow || randomUUID();
     try {
       await auth.sendCode(email);
     } catch (error) {
       if (error.status === 429) {
-        const response = loginRedirect({ flow: nextFlow, error: 'send-limit' });
-        setChallenge(response, nextFlow, email);
+        const response = respond({ flow: nextFlow, error: 'send-limit' });
+        setChallenge(response, nextFlow, email, desktop);
         return response;
       }
-      return loginRedirect({ flow: flow || undefined, error: isInvalid(error) ? 'send' : 'unavailable' });
+      return respond({ flow: flow || undefined, error: isInvalid(error) ? 'send' : 'unavailable' });
     }
-    const response = loginRedirect({ flow: nextFlow });
-    setChallenge(response, nextFlow, email);
+    const response = respond({ flow: nextFlow });
+    setChallenge(response, nextFlow, email, desktop);
     return response;
   }
 
-  if (!challenge) return loginRedirect({ error: 'expired' });
+  if (!challenge) return respond({ error: 'expired' });
   const code = form.get('token') ?? '';
-  if (!/^[0-9]{6}$/.test(code)) return loginRedirect({ flow, error: 'code' });
+  if (!/^[0-9]{6}$/.test(code)) return respond({ flow, error: 'code' });
   try {
     const session = await auth.verifyCode(challenge, code);
+    if (requestContext) {
+      let grant;
+      try {
+        grant = issueGrant(requestContext.challenge, {
+          access_token: session.access_token, refresh_token: session.refresh_token,
+          expires_in: session.expires_in, email: session.user?.email || challenge,
+        });
+      } catch {
+        await auth.logout(session.access_token).catch(() => {});
+        return respond({ flow, error: 'unavailable' });
+      }
+      const response = redirectResponse('/desktop/complete?' + new URLSearchParams({ desktop }));
+      setChallenge(response, flow, '');
+      setDesktopRequest(response, desktop, null);
+      setDesktopTicket(response, desktop, { code: grant, state: requestContext.state });
+      return response;
+    }
     const response = redirectResponse('/account');
     saveSession(response, session);
     setChallenge(response, flow, '');
     return response;
   } catch (error) {
-    return loginRedirect({
+    return respond({
       flow,
       error: error.status === 429 ? 'verify-limit' : isInvalid(error) ? 'code' : 'unavailable',
     });

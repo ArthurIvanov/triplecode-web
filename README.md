@@ -19,7 +19,7 @@
 
 ### Запуск
 
-Нужен Node.js 22+. Установите зависимости через `npm ci`, запустите `npm run dev` и откройте
+Нужен Node.js 22.13+. Установите зависимости через `npm ci`, запустите `npm run dev` и откройте
 [localhost:3000](http://localhost:3000). Для регистрации поднимите Supabase
 по [инструкции API](apps/api/README.md), скопируйте `.env.example` в `.env`
 и укажите адрес API и publishable key (или локальный anon key). Перезапустите
