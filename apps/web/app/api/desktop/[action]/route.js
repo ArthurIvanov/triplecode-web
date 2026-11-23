@@ -37,6 +37,7 @@ export async function POST(request, { params }) {
         return reply({ error: 'invalid_request' }, 400);
       }
       const session = exchangeGrant(fields.code, fields.verifier);
+      console.log('[api/desktop/exchange] code:', fields.code?.slice(0, 10), 'verifier:', fields.verifier?.slice(0, 10), 'session:', session ? 'found' : 'null');
       if (!session) return reply({ error: 'invalid_grant' }, 401);
       const label = typeof fields.label === 'string' ? fields.label.slice(0, 120) : null;
       const sessionId = recordSession(session.email, session, label);

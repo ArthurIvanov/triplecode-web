@@ -16,11 +16,23 @@ export async function GET(request) {
   }
   const jar = await cookies();
   const accessToken = jar.get('access')?.value || jar.get('__Host-tc-access')?.value || jar.get('tc-access')?.value;
+  const refreshToken = jar.get('refresh')?.value || jar.get('__Host-tc-refresh')?.value || jar.get('tc-refresh')?.value;
   const existingUser = await getUser(accessToken).catch(() => null);
-  if (existingUser?.email) {
-    const code = createGrant(challenge, state);
-    const callbackUrl = 'triplecode://triplecode.triplecode-mvp/auth/callback?code=' + encodeURIComponent(code) + '&state=' + encodeURIComponent(state);
-    return new Response('Redirecting to TripleCode', { status: 303, headers: { Location: callbackUrl, 'Cache-Control': 'no-store' } });
+  if (existingUser?.email && refreshToken) {
+    try {
+      const refreshResult = await auth.refresh(refreshToken);
+      const session = {
+        access_token: refreshResult.access_token,
+        refresh_token: refreshResult.refresh_token,
+        expires_in: refreshResult.expires_in,
+        email: refreshResult.user?.email || existingUser.email,
+      };
+      const code = createGrant(challenge, state, session);
+      const callbackUrl = 'triplecode://triplecode.triplecode-mvp/auth/callback?code=' + encodeURIComponent(code) + '&state=' + encodeURIComponent(state);
+      return new Response('Redirecting to TripleCode', { status: 303, headers: { Location: callbackUrl, 'Cache-Control': 'no-store' } });
+    } catch {
+      // fall through to email flow
+    }
   }
   const desktop = randomUUID();
   const response = loginRedirect({ desktop });
