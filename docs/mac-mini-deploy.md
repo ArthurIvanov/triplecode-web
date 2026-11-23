@@ -106,11 +106,11 @@ Mailpit опубликован на loopback. Проверка создаёт а
 `deploy/public/triplecode.conf`. Сертификат выпущен Certbot с каталогом
 `/var/www/acme` и именем `triplecode.ru` в существующем стеке ingress.
 
-Публичный контейнер `triplecode-web-public` использует образ LAN-сайта,
-`APP_ORIGIN=https://triplecode.ru` и сеть `triplenote-public`. Он запускается
-без опубликованного порта и без параметров Supabase Auth. LAN-контейнер с
-Mailpit обслуживается отдельно. Публичный вход появится при подключении SMTP
-и отдельной конфигурации Auth.
+Публичный сайт работает в `triplecode-production`. Nginx проксирует
+`triplecode-production-web-1:3000` по сети `triplenote-public`. Контейнер
+сайта использует `APP_ORIGIN=https://triplecode.ru`. Auth и его база работают
+во внутренней сети Compose. LAN-контейнер с Mailpit обслуживается отдельно.
+Для запросов кода и его проверки nginx ограничивает частоту по IP.
 
 Проверка после изменений nginx включает HTTPS 200 на главной, редирект
 HTTP 301 на HTTPS и ответ сайта по LAN.
