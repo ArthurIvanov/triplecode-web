@@ -94,7 +94,7 @@ test('Next.js serves email OTP, protected profile, refresh and logout', async t 
   const challengePath = location(challengeResponse);
   const flow = new URL(challengePath, origin).searchParams.get('flow');
   assert.match(flow, /^[a-f0-9-]{36}$/);
-  assert.match(await (await get(challengePath, { Cookie: jar(challengeResponse) })).text(), /Введите код/);
+  assert.match(await (await get(challengePath, { Cookie: jar(challengeResponse) })).text(), /Проверьте почту/);
   assert.deepEqual(calls[0].data, { email, create_user: true });
 
   const secondEmail = 'second@example.test';

@@ -1,4 +1,5 @@
 export default {
+  agentRules: false,
   poweredByHeader: false,
   async headers() {
     return [{
