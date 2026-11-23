@@ -12,6 +12,7 @@ export function createAuth({ url, key }) {
     try {
       response = await fetch(new URL('/auth/v1/' + path, url), {
         method: data ? 'POST' : 'GET',
+        cache: 'no-store',
         headers: {
           apikey: key,
           'Content-Type': 'application/json',
