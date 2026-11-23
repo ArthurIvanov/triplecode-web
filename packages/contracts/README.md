@@ -7,9 +7,10 @@
 Публичный base URL — `https://triplecode.ru`. IDE открывает
 `GET /desktop/start` в системном браузере с `code_challenge_method=S256`,
 `code_challenge` (SHA-256 от verifier, base64url) и случайным `state`.
-Verifier и state — 32 случайных байта в base64url без дополнения. Браузер
-запрашивает и подтверждает email. После подтверждения он показывает ссылку
-`triplecode://triplecode.triplecode-mvp/auth/callback?code=…&state=…`.
+Verifier и state — 32 случайных байта в base64url без дополнения. Если браузер
+уже авторизован, grant создаётся сразу и callback идёт без email-кода.
+Иначе браузер запрашивает и подтверждает email. После подтверждения он
+показывает ссылку `triplecode://triplecode.triplecode-mvp/auth/callback?code=…&state=…`.
 Callback фиксирован. Ссылка содержит одноразовый grant на две минуты.
 
 JSON POST `/api/desktop/exchange` принимает `{code, verifier, label?}` и

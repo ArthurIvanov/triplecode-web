@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { desktopSecret } from '../../../../api/desktop-grants.mjs';
+import { desktopSecret, createGrant } from '../../../../api/desktop-grants.mjs';
 import { desktopEnabled, setDesktopRequest } from '@/lib/desktop';
-import { auth, loginRedirect } from '@/lib/session';
+import { auth, loginRedirect, getUser, cookieName, secure } from '@/lib/session';
+import { cookies } from 'next/headers';
 
-export function GET(request) {
+export async function GET(request) {
   const params = request.nextUrl.searchParams;
   const challenge = params.get('code_challenge');
   const state = params.get('state');
@@ -12,6 +13,14 @@ export function GET(request) {
     return new Response('Не удалось начать вход из TripleCode. Повторите вход в IDE.', {
       status: 400, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
     });
+  }
+  const jar = await cookies();
+  const accessToken = jar.get('access')?.value || jar.get('__Host-tc-access')?.value || jar.get('tc-access')?.value;
+  const existingUser = await getUser(accessToken).catch(() => null);
+  if (existingUser?.email) {
+    const code = createGrant(challenge, state);
+    const callbackUrl = 'triplecode://triplecode.triplecode-mvp/auth/callback?code=' + encodeURIComponent(code) + '&state=' + encodeURIComponent(state);
+    return new Response('Redirecting to TripleCode', { status: 303, headers: { Location: callbackUrl, 'Cache-Control': 'no-store' } });
   }
   const desktop = randomUUID();
   const response = loginRedirect({ desktop });

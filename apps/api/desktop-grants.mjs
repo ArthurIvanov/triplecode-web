@@ -43,6 +43,10 @@ export function issueGrant(challenge, session) {
   return code;
 }
 
+export function createGrant(challenge, state) {
+  return issueGrant(challenge, { state });
+}
+
 export function exchangeGrant(code, verifier) {
   const now = Date.now();
   const db = store();
