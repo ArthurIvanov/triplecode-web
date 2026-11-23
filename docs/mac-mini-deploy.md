@@ -68,3 +68,33 @@ ssh -N -L 3000:127.0.0.1:3000 -L 54324:127.0.0.1:54324 user@mac-mini.local
 постоянный self-hosted Supabase и SMTP с настроенным доменом отправителя.
 В публичный доступ выводится веб-приложение через HTTPS. Порты Mailpit,
 Postgres и административного интерфейса остаются служебными.
+
+## Вариант для изолированной проверки Auth
+
+Если образы полного Supabase CLI недоступны, `compose.auth.yaml` добавляет к
+сайту Supabase Auth, Postgres, внутренний шлюз и Mailpit. Используйте этот
+вариант с отдельной базой и тестовыми адресами. Studio и другие API в этот
+набор не входят. Не запускайте его одновременно с CLI на том же порту Mailpit.
+
+В `.env.docker` для этого варианта укажите
+`SUPABASE_URL=http://auth-gateway:8080`. Установите три независимых случайных
+значения через `openssl rand -hex 32` для `AUTH_DB_PASSWORD`,
+`AUTH_JWT_SECRET` и `SUPABASE_PUBLISHABLE_KEY`. Последний требуется веб-серверу
+для настройки клиента. Внутренний шлюз доступен только контейнерам этой
+Compose-сети и не публикует порт на Mac mini. После инициализации тома
+сохраните тот же пароль БД при перезапусках.
+
+```sh
+docker compose --env-file .env.docker -f compose.yaml -f compose.auth.yaml up --build -d --wait
+python3 deploy/lan/check-otp.py http://192.168.1.14:3000
+```
+
+Если базовый Node.js-образ недоступен, но уже есть `nginx:1.28.0-alpine`,
+соберите веб-образ через `docker build -t triplecode-web-web -f deploy/lan/Dockerfile .`
+и запустите предыдущую команду Compose с `--no-build --pull never` вместо
+`--build`. Мониторинг сквозного теста выполняется на Mac mini, поскольку
+Mailpit опубликован на loopback. Проверка создаёт аккаунт на уникальный
+синтетический адрес в домене `example.test`.
+
+При ручной замене контейнера Auth перезапустите и внутренний nginx-шлюз,
+чтобы он обновил адрес Auth в сети Compose.
