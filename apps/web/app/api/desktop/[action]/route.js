@@ -39,8 +39,13 @@ export async function POST(request, { params }) {
       const session = exchangeGrant(fields.code, fields.verifier);
       if (!session) return reply({ error: 'invalid_grant' }, 401);
       const label = typeof fields.label === 'string' ? fields.label.slice(0, 120) : null;
-      const sessionId = recordSession(session.email, session, label);
-      return reply({ ...session, session_id: sessionId });
+      try {
+        const sessionId = recordSession(session.email, session, label);
+        return reply({ ...session, session_id: sessionId });
+      } catch (error) {
+        console.error('[api/desktop/exchange] recordSession failed:', error);
+        return reply({ ...session, session_id: null });
+      }
     }
     if (action === 'refresh' && typeof fields.refresh_token === 'string' && fields.refresh_token) {
       const session = await auth.refresh(fields.refresh_token);
