@@ -1,0 +1,39 @@
+name: triplecode-production
+services:
+  web:
+    image: triplecode-web-web:latest
+    init: true
+    restart: unless-stopped
+    environment:
+      APP_ORIGIN: https://triplecode.ru
+      SUPABASE_URL: http://auth-gateway:8080
+      SUPABASE_PUBLISHABLE_KEY: "${SUPABASE_PUBLISHABLE_KEY:?}"
+    networks:
+      - default
+      - ingress
+  auth-db:
+    extends:
+      file: compose.auth.yaml
+      service: auth-db
+  auth:
+    extends:
+      file: compose.auth.yaml
+      service: auth
+    environment:
+      API_EXTERNAL_URL: https://triplecode.ru
+      GOTRUE_SITE_URL: https://triplecode.ru
+      GOTRUE_SMTP_ADMIN_EMAIL: "${TRIPLECODE_SMTP_EMAIL:?}"
+      GOTRUE_SMTP_HOST: smtp.spaceweb.ru
+      GOTRUE_SMTP_PORT: '465'
+      GOTRUE_SMTP_USER: "${TRIPLECODE_SMTP_EMAIL:?}"
+      GOTRUE_SMTP_PASS: "${TRIPLECODE_SMTP_PASSWORD:?}"
+  auth-gateway:
+    extends:
+      file: compose.auth.yaml
+      service: auth-gateway
+volumes:
+  auth-data-v2:
+networks:
+  ingress:
+    external: true
+    name: triplenote-public
