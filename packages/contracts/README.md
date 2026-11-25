@@ -48,6 +48,14 @@ JSON `{feature, provider, model, duration_ms, outcome}`. `feature` —
 для одного экземпляра веб-сервера. В ней сохраняются хеш кода и зашифрованный
 grant. Перезапуск с потерей базы требует начать незавершённый вход заново.
 
+## План и soft quota (R-A1 / S09)
+
+Кабинет `/account/plan` показывает план **Pilot · BYOK**. Soft-лимит
+событий usage за 30 дней задаётся `USAGE_SOFT_LIMIT` (по умолчанию 500) и
+считается в `softQuota(email)` из `apps/api/usage-events.mjs`. Превышение
+не блокирует IDE — только сигнал в кабинете. Hosted checkout / жёсткий
+биллинг — вне этого контракта (позже).
+
 ## Release manifest
 
 Схема: `schemas/release-manifest.schema.json`. Пример: `fixtures/release-manifest.example.json`.

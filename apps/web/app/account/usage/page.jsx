@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { CabinetShell } from '@/components/cabinet-shell';
 import { Card } from '@/components/ui/card';
 import { cookieName, getUser } from '@/lib/session';
-import { usageSummary } from '../../../../api/usage-events.mjs';
+import { softQuota, usageSummary } from '../../../../api/usage-events.mjs';
 
 export const metadata = { title: 'Использование — TripleCode' };
 export const dynamic = 'force-dynamic';
@@ -31,6 +31,7 @@ export default async function Usage() {
     redirect(jar.has(cookieName('refresh')) ? '/auth/session' : '/login');
   }
   const summary = usageSummary(user.email);
+  const quota = softQuota(user.email);
   const maxDay = Math.max(1, ...summary.days.map(day => day.count));
   const maxFeature = Math.max(1, ...summary.byFeature.map(item => item.count));
   const maxModel = Math.max(1, ...summary.byModel.map(item => item.count));
@@ -40,7 +41,8 @@ export default async function Usage() {
       <div className="max-w-2xl">
         <h1 className="text-2xl font-semibold tracking-tight">Использование</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          AI-запросы из TripleCode IDE за последние 30 дней.
+          AI-запросы из TripleCode IDE за последние 30 дней. Soft quota Pilot · BYOK:
+          {' '}{quota.used}/{quota.limit}.
         </p>
         <div className="mt-6 grid grid-cols-3 gap-3">
           {[

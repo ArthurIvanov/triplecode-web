@@ -48,7 +48,9 @@ export default async function Account({ searchParams }) {
               </div>
             </dl>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Button asChild variant="secondary"><Link href="/account/sessions">Управление сессиями</Link></Button>
+              <Button asChild><Link href="/account/plan">План · Pilot BYOK</Link></Button>
+              <Button asChild variant="secondary"><Link href="/account/usage">Использование</Link></Button>
+              <Button asChild variant="secondary"><Link href="/account/sessions">Сессии</Link></Button>
               <Button asChild variant="ghost"><a href="/">На главную</a></Button>
             </div>
           </Card>

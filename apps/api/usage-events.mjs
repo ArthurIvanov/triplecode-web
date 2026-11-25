@@ -42,6 +42,24 @@ export function recordUsage(email, event) {
   `).run(email, Date.now(), feature, provider, model, duration, outcome);
 }
 
+export function softQuota(email, {
+  days = 30,
+  limit = Number(process.env.USAGE_SOFT_LIMIT || 500)
+} = {}) {
+  const summary = usageSummary(email, { days });
+  const used = summary.totals.events;
+  const softLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 500;
+  return {
+    plan: 'pilot-byok',
+    soft: true,
+    days,
+    limit: softLimit,
+    used,
+    remaining: Math.max(0, softLimit - used),
+    ratio: softLimit ? Math.min(1, used / softLimit) : 0
+  };
+}
+
 export function usageSummary(email, { days = 30 } = {}) {
   if (!process.env.DESKTOP_GRANT_DB) return { days: [], byFeature: [], byModel: [], byOutcome: [], totals: { events: 0, ok: 0, errors: 0, accepted: 0, rejected: 0 } };
   const since = Date.now() - days * 86400000;

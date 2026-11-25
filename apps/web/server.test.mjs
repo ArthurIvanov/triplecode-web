@@ -213,5 +213,6 @@ test('Next.js serves email OTP, protected profile, refresh and logout', async t 
   });
   assert.equal(usagePost.status, 200);
   assert.match(await (await get('/account/usage', webSessionCookie)).text(), /test-model/);
+  assert.match(await (await get('/account/plan', webSessionCookie)).text(), /Pilot · BYOK/);
 
 });

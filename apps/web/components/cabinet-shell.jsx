@@ -9,7 +9,7 @@ const sections = [
   { href: '/account', label: 'Профиль', exact: true },
   { href: '/account/sessions', label: 'Сессии' },
   { href: '/account/usage', label: 'Использование' },
-  { href: '/account/plan', label: 'План', soon: true },
+  { href: '/account/plan', label: 'План' },
   { href: '/account/billing', label: 'Счета', soon: true },
 ];
 
