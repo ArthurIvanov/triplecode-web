@@ -36,11 +36,19 @@ id, email, зашифрованный refresh-токен, метка, даты �
 
 POST `/api/usage/event` принимает Bearer access_token сессии устройства и
 JSON `{feature, provider, model, duration_ms, outcome}`. `feature` —
-`agent|plan|ask|rewrite|inline|other`, `outcome` — `ok|error|stopped`.
+`agent|plan|ask|rewrite|inline|other`, `outcome` — `ok|error|stopped|accepted|rejected`.
 Сервер проверяет токен через Supabase Auth и пишет событие в
 `usage_events` (email, время, функция, провайдер, модель, длительность,
 результат). Это trust-based телеметрия для кабинета «Использование»,
 не для биллинга. Ответ `{recorded: true}` или 401/400/404/503.
+
+Опциональное поле `pilot` (`{task_id, step, duration_ms?}`) помечает
+шаг закрытого пилота (S22): `task_id` — `^[A-Za-z0-9_-]{1,64}$`,
+`step` — `import|first_agent|review_keep|done`. Валидные шаги пишутся
+в отдельную таблицу `pilot_events` (email, ts, task_id, step,
+duration_ms) и не влияют на usage-агрегаты. Невалидный `pilot`
+игнорируется, событие usage записывается как обычно. Запрещено
+передавать код, промпты, пути файлов и секреты.
 
 Токены IDE не записываются в браузерную сессию. Существующий веб-вход
 продолжает выдавать веб-cookie. Для включения укажите `DESKTOP_GRANT_DB` в

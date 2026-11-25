@@ -7,6 +7,8 @@ let database;
 const FEATURES = new Set(['agent', 'plan', 'ask', 'rewrite', 'inline', 'other']);
 const PROVIDERS = new Set(['ollama', 'openrouter', 'auto']);
 const OUTCOMES = new Set(['ok', 'error', 'stopped', 'accepted', 'rejected']);
+const PILOT_STEPS = new Set(['import', 'first_agent', 'review_keep', 'done']);
+const PILOT_TASK_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
 function store() {
   if (database) return database;
@@ -26,6 +28,15 @@ function store() {
       outcome TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS usage_events_email_ts ON usage_events(email, ts);
+    CREATE TABLE IF NOT EXISTS pilot_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT NOT NULL,
+      ts INTEGER NOT NULL,
+      task_id TEXT NOT NULL,
+      step TEXT NOT NULL,
+      duration_ms INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS pilot_events_email_ts ON pilot_events(email, ts);
   `);
   return database;
 }
@@ -40,6 +51,53 @@ export function recordUsage(email, event) {
     INSERT INTO usage_events (email, ts, feature, provider, model, duration_ms, outcome)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `).run(email, Date.now(), feature, provider, model, duration, outcome);
+}
+
+export function recordPilotStep(email, pilot) {
+  if (!pilot || typeof pilot !== 'object') return false;
+  const taskId = typeof pilot.task_id === 'string' ? pilot.task_id : '';
+  const step = typeof pilot.step === 'string' ? pilot.step : '';
+  if (!PILOT_TASK_ID.test(taskId) || !PILOT_STEPS.has(step)) return false;
+  const duration = Number.isFinite(pilot.duration_ms)
+    ? Math.max(0, Math.min(pilot.duration_ms, 3600000))
+    : null;
+  store().prepare(`
+    INSERT INTO pilot_events (email, ts, task_id, step, duration_ms)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(email, Date.now(), taskId, step, duration);
+  return true;
+}
+
+export function pilotSummary(email, { days = 90 } = {}) {
+  if (!process.env.DESKTOP_GRANT_DB) {
+    return { tasks: [], totals: { tasks: 0, completed: 0, importDone: 0, firstAgentDone: 0, reviewKeepDone: 0 } };
+  }
+  const since = Date.now() - days * 86400000;
+  const rows = store().prepare(`
+    SELECT task_id, step, ts, duration_ms FROM pilot_events
+    WHERE email = ? AND ts >= ? ORDER BY ts
+  `).all(email, since);
+  const tasks = new Map();
+  for (const row of rows) {
+    if (!tasks.has(row.task_id)) tasks.set(row.task_id, { taskId: row.task_id, steps: new Set(), firstTs: row.ts, lastTs: row.ts });
+    const task = tasks.get(row.task_id);
+    task.steps.add(row.step);
+    task.lastTs = Math.max(task.lastTs, row.ts);
+  }
+  const list = [...tasks.values()].map(task => ({
+    taskId: task.taskId,
+    steps: [...task.steps].sort(),
+    durationMs: task.lastTs - task.firstTs,
+    completed: task.steps.has('done')
+  })).sort((a, b) => a.taskId.localeCompare(b.taskId));
+  const totals = {
+    tasks: list.length,
+    completed: list.filter(task => task.completed).length,
+    importDone: list.filter(task => task.steps.includes('import')).length,
+    firstAgentDone: list.filter(task => task.steps.includes('first_agent')).length,
+    reviewKeepDone: list.filter(task => task.steps.includes('review_keep')).length
+  };
+  return { tasks: list, totals };
 }
 
 export function softQuota(email, {

@@ -1,4 +1,4 @@
-import { recordUsage } from '../../../../../api/usage-events.mjs';
+import { recordUsage, recordPilotStep } from '../../../../../api/usage-events.mjs';
 import { desktopEnabled } from '@/lib/desktop';
 import { auth, getUser, isInvalid } from '@/lib/session';
 
@@ -30,6 +30,7 @@ export async function POST(request) {
     const event = JSON.parse(Buffer.concat(chunks).toString('utf8'));
     if (!event || typeof event !== 'object') return reply({ error: 'invalid_request' }, 400);
     recordUsage(user.email, event);
+    if (event.pilot) recordPilotStep(user.email, event.pilot);
     return reply({ recorded: true });
   } catch (error) {
     if (error instanceof SyntaxError) return reply({ error: 'invalid_request' }, 400);
