@@ -1,0 +1,14 @@
+{
+  "version": "0.1.0",
+  "channel": "preview",
+  "publishedAt": "2026-11-25T00:00:00Z",
+  "artifacts": [
+    {
+      "os": "darwin",
+      "arch": "arm64",
+      "name": "TripleCode-darwin-arm64.zip",
+      "url": "https://github.com/example/triplecode/releases/download/v0.1.0/TripleCode-darwin-arm64.zip",
+      "sha512": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    }
+  ]
+}

@@ -47,3 +47,9 @@ JSON `{feature, provider, model, duration_ms, outcome}`. `feature` —
 приватном каталоге веб-контейнера. Его SQLite-база временная и предназначена
 для одного экземпляра веб-сервера. В ней сохраняются хеш кода и зашифрованный
 grant. Перезапуск с потерей базы требует начать незавершённый вход заново.
+
+## Release manifest
+
+Схема: `schemas/release-manifest.schema.json`. Пример: `fixtures/release-manifest.example.json`.
+Валидация без внешних зависимостей: `node packages/contracts/validate-manifest.mjs <file>`.
+Манифест публикует CI репозитория IDE (`release.yml`). Страница загрузок читает тот же JSON.

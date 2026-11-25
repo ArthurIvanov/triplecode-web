@@ -1,0 +1,22 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [master, main, 'codex/**']
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Test (build + HTTP scenario)
+        run: npm test
+      - name: Validate release-manifest schema fixture
+        run: node packages/contracts/validate-manifest.mjs packages/contracts/fixtures/release-manifest.example.json

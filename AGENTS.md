@@ -4,3 +4,10 @@
 - Серверную логику аккаунтов, оплаты, лимитов и аналитики размещай в `apps/api`.
 - При изменении клиентского API обновляй `packages/contracts` и проверяй совместимость с выпущенными версиями IDE.
 - Страница загрузки получает версии и ссылки из манифеста релизов IDE.
+
+## Связь с IDE
+
+- Корневые правила IDE: `../triplecode/AGENTS.md`.
+- Синхронизация контрактов: `../triplecode/docs/contracts-sync.md`.
+- Кабинет/квоты блокируют внешний пилот IDE (сценарий S09, roadmap R-A1).
+- CI: `.github/workflows/ci.yml` (`npm test` + validate release-manifest fixture).
